@@ -69,7 +69,10 @@ class HumanoidWalkingTaskConfig(ksim.PPOConfig):
         value=True,
         help="Whether to use the IMU acceleration and gyroscope observations.",
     )
-
+    #use_domain_randomization: bool = xax.field(
+    #    value=True,
+    #    help="Whether to use domain randomization.",
+    #)
     # Curriculum parameters.
     num_curriculum_levels: int = xax.field(
         value=100,
