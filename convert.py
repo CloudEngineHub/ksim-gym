@@ -1,4 +1,7 @@
 """Converts a checkpoint to a deployable model."""
+from __future__ import annotations
+import sys
+
 
 import argparse
 from pathlib import Path
@@ -11,10 +14,11 @@ from jaxtyping import Array
 from kinfer.export.jax import export_fn
 from kinfer.export.serialize import pack
 
-from train import HumanoidWalkingTask, Model
+import importlib.util
+#  from train import HumanoidWalkingTask, Model # << NOW DONE INLINE
 
 
-def make_export_model(model: Model) -> Callable:
+def make_export_model(model: "Model") -> Callable:
     def model_fn(obs: Array, carry: Array) -> tuple[Array, Array]:
         dist, carry = model.actor.forward(obs, carry)
         return dist.mode(), carry
@@ -29,10 +33,39 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("checkpoint_path", type=str)
     parser.add_argument("output_path", type=str)
+    parser.add_argument("--train_override", type=str, default=None)
     args = parser.parse_args()
 
+    training_path = None
+    if args.train_override is None: 
+        # Default Path, local train version
+        training_path = Path(__file__).parent / "train.py"
+    else:
+        if not (training_path := Path(args.train_override)).exists():
+            raise FileNotFoundError(f"Training code path {training_path} does not exist")
+        else:
+            sys.path.append(str(training_path.parent))
+    try:
+        spec = importlib.util.spec_from_file_location(training_path.stem, training_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        # Get Classes
+        HumanoidWalkingTask = getattr(module, "HumanoidWalkingTask")
+        Model = getattr(module, "Model")
+    except Exception as e:
+        raise ImportError(f"Failed to import training code from {training_path}: {e}")
+    
     if not (ckpt_path := Path(args.checkpoint_path)).exists():
         raise FileNotFoundError(f"Checkpoint path {ckpt_path} does not exist")
+
+    # Patch the classes to make inspect.getfile work
+    HumanoidWalkingTask.__module__ = "__main__"  # Set the module name
+    HumanoidWalkingTask.__file__ = str(training_path)  # Set the file path
+
+    # If needed, do the same for Model
+    Model.__module__ = "__main__"
+    Model.__file__ = str(training_path)
 
     task: HumanoidWalkingTask = HumanoidWalkingTask.load_task(ckpt_path)
     model: Model = task.load_ckpt(ckpt_path, part="model")[0]
