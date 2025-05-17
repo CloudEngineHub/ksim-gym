@@ -58,8 +58,14 @@ def main() -> None:
         gyroscope: Array,
         carry: Array,
     ) -> tuple[Array, Array]:
+        # Add sine and cosine of time (using a placeholder value of 0)
+        time_sin = jnp.array([jnp.sin(0.0)])
+        time_cos = jnp.array([jnp.cos(0.0)])
+        
         obs = jnp.concatenate(
             [
+                time_sin,
+                time_cos,
                 joint_angles,
                 joint_angular_velocities,
                 projected_gravity,
