@@ -59,8 +59,8 @@ def main() -> None:
         carry: Array,
     ) -> tuple[Array, Array]:
         # Add sine and cosine of time (using a placeholder value of 0)
-        time_sin = jnp.array([jnp.sin(0.0)])
-        time_cos = jnp.array([jnp.cos(0.0)])
+        time_sin = jnp.array([0.0])
+        time_cos = jnp.array([1.0])
         
         obs = jnp.concatenate(
             [
